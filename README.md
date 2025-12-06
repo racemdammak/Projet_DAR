@@ -167,19 +167,3 @@ mini-cloud/
 4. **Erreur React** :
    - Vérifiez que Node.js est installé
    - Supprimez `node_modules` et réexécutez `npm install`
-
-### Logs et Debugging
-
-- Les logs du serveur CORBA s'affichent dans le terminal où il est démarré
-- Les logs du serveur REST s'affichent dans son terminal dédié
-- Pour le client React, ouvrez les outils de développement du navigateur (F12)
-
-## Développement
-
-### Ajout de Fonctionnalités
-
-Pour étendre le système :
-
-1. **Côté CORBA** : Modifiez `Cloud.idl` pour ajouter de nouvelles opérations
-2. **Côté REST** : Ajoutez de nouvelles routes dans `CloudRestServer.java`
-3. **Côté Client** : Modifiez `CloudClient.js` pour intégrer les nouvelles fonctionnalités
