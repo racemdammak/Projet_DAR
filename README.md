@@ -1,117 +1,185 @@
-# MiniCloud Project
+# MiniCloud - Système de Stockage en Nuage
 
-MiniCloud est un projet de cloud personnel développé en Java avec CORBA pour la communication serveur, une interface REST via SparkJava pour exposer les fonctionnalités du serveur et une interface front-end React pour interagir avec le cloud depuis un navigateur.
+MiniCloud est un système de stockage en nuage simple et distribué, composé d'un client web React et d'un serveur backend Java utilisant CORBA pour la gestion des fichiers. Le système permet d'uploader, télécharger, lister et supprimer des fichiers via une interface utilisateur intuitive.
 
-## Structure du projet
+## Architecture du Système
 
-```
-MiniCloud_CORBA/
-├── src/
-│   ├── cloud/
-│   │   ├── server/
-│   │   │   ├── CloudServer.java       # Serveur CORBA
-│   │   │   ├── CloudRestServer.java   # Serveur REST pour exposer CloudServer
-│   │   │   └── FileManager.java       # Gestion des fichiers (save/read/delete/list)
-│   │   └── CloudModule/               # Fichiers générés par idlj
-├── cloud-client/
-│   └── src/
-│       └── CloudClient.js             # Interface React
-├── pom.xml                             # Gestion des dépendances Maven
-└── README.md
-```
+Le projet est divisé en deux composants principaux :
+
+1. **cloud-client** : Application React pour l'interface utilisateur
+2. **MiniCloud_CORBA** : Serveur Java utilisant CORBA pour la logique métier et une API REST (SparkJava) pour la communication avec le client
+
+### Flux de Données
+- Le client React communique avec le serveur sur le port 4567
+- Le serveur REST utilise CORBA pour accéder aux services de stockage (port 1050)
 
 ## Prérequis
 
-- Java JDK 8 ou supérieur
-- Maven pour gérer les dépendances
-- Node.js et npm/yarn pour React
-- IntelliJ IDEA
-- tnameserv pour CORBA NameService
+Avant de commencer, assurez-vous d'avoir installé :
 
-## Lancer le CORBA NameService
+- **Node.js** (version 16 ou supérieure) pour le client React
+- **Java JDK** (version 8 ou supérieure) pour le serveur CORBA
+- **Maven** pour la gestion des dépendances Java
 
-Le serveur CORBA utilise un NameService pour enregistrer et récupérer les objets.
+### Installation des Prérequis
 
-1. Ouvrir un terminal.
-2. Lancer le NameService sur le port 1050 :
+#### Sur Windows
+1. Téléchargez et installez Node.js depuis [nodejs.org](https://nodejs.org/)
+2. Téléchargez et installez Java JDK depuis [oracle.com](https://www.oracle.com/java/technologies/javase-downloads.html)
+3. Téléchargez et installez Maven depuis [maven.apache.org](https://maven.apache.org/download.cgi)
+4. Ajoutez Java et Maven à votre PATH système
 
-```bash
-tnameserv -ORBInitialPort 1050
-```
+## Installation et Configuration
 
-⚠️ Sur certaines versions, `-ORBInitialHost` n'est pas nécessaire. Le port suffit.
-
-## Lancer le serveur CORBA (CloudServer)
-
-1. Compiler et exécuter CloudServer.java :
+### Étape 1 : Cloner le Repository
 
 ```bash
-cd MiniCloud_CORBA/src
-javac cloud/server/*.java
-java cloud.server.CloudServer
+git clone <url-du-repository>
+cd mini-cloud
 ```
 
-Le serveur est maintenant prêt et écoute les appels CORBA.
+### Étape 2 : Configuration du Serveur CORBA
 
-## Lancer le serveur REST (CloudRestServer)
-
-1. Compiler et exécuter CloudRestServer.java :
-
+1. Naviguez vers le répertoire du serveur :
 ```bash
-javac cloud/server/CloudRestServer.java
-java cloud.server.CloudRestServer
+cd MiniCloud_CORBA
 ```
 
-Le serveur REST s'expose sur `http://127.0.0.1:4567`.
+2. Compilez le projet avec Maven :
+```bash
+mvn clean compile
+```
 
-⚠️ CORS est activé pour permettre l'accès depuis React (localhost:3000).
+### Étape 3 : Configuration du Client React
 
-## Lancer le client React
-
-1. Aller dans le dossier cloud-client/ :
-
+1. Ouvrez un nouveau terminal et naviguez vers le répertoire du client :
 ```bash
 cd cloud-client
 ```
 
-2. Installer les dépendances :
-
+2. Installez les dépendances Node.js :
 ```bash
 npm install
 ```
 
-3. Lancer le serveur de développement React :
+## Démarrage du Système
 
+Le système doit être démarré dans un ordre spécifique : serveur CORBA en premier, puis serveur REST, enfin le client React.
+
+### Étape 1 : Démarrer le Serveur CORBA
+
+1. Ouvrez un terminal dans `MiniCloud_CORBA`
+2. Démarrez le serveur CORBA :
+```bash
+mvn exec:java -Dexec.mainClass="cloud.server.CloudServer"
+```
+
+Le serveur CORBA démarrera sur le port 1050 et créera automatiquement le répertoire `cloud_storage` pour stocker les fichiers.
+
+### Étape 2 : Démarrer le Serveur des api
+
+1. Ouvrez un deuxième terminal dans `MiniCloud_CORBA`
+2. Démarrez le serveur:
+```bash
+mvn exec:java -Dexec.mainClass="cloud.server.CloudRestServer"
+```
+
+Le serveur des api démarrera sur le port 4567 et se connectera au service CORBA.
+
+### Étape 3 : Démarrer le Client React
+
+1. Ouvrez un troisième terminal dans `cloud-client`
+2. Démarrez l'application React :
 ```bash
 npm start
 ```
 
-4. Ouvrir le navigateur sur `http://localhost:3000`.
+L'application sera accessible à l'adresse `http://localhost:3000`
 
-Tu verras :
-- Drag & Drop pour uploader des fichiers
-- Liste des fichiers disponibles sur le serveur
-- Boutons pour télécharger ou supprimer les fichiers
+## Utilisation
 
-## Fonctionnement général
+### Interface Utilisateur
 
-- **CloudServer** gère les fichiers localement et expose les méthodes CORBA : upload, download, deleteFile, listFiles.
-- **CloudRestServer** agit comme passerelle, en utilisant SparkJava pour exposer les méthodes CORBA vers HTTP.
-- **CloudClient** (React) permet d'interagir avec le serveur REST via le navigateur : upload, download, suppression et liste des fichiers.
-- CORS est géré côté REST pour permettre la communication avec React sur un autre port.
+Une fois l'application démarrée :
 
-## Notes importantes
+1. **Upload de fichiers** :
+   - Glissez-déposez des fichiers dans la zone dédiée
+   - Ou cliquez pour sélectionner des fichiers
+   - Les fichiers sont automatiquement uploadés vers le serveur
 
-- Les fichiers sont stockés dans le dossier où s'exécute le serveur CORBA (par défaut ./).
-- La liste des fichiers est renvoyée en JSON valide pour que React puisse la traiter.
-- Assurez-vous que tnameserv est lancé avant CloudServer.
-- Pour les fichiers volumineux, la communication REST utilise InputStream et ByteArrayOutputStream.
+2. **Gestion des fichiers** :
+   - La liste des fichiers disponibles s'affiche automatiquement
+   - Cliquez sur "Télécharger" pour récupérer un fichier
+   - Cliquez sur "Supprimer" pour effacer un fichier
 
-## Dépendances principales
+3. **Notifications** :
+   - Des toasts apparaissent pour confirmer les actions réussies ou signaler les erreurs
 
-### Java / CORBA
-- SparkJava pour REST
-- React + react-dropzone + react-toastify
-- SLF4J (logger, optionnel)
-- Gson (optionnel pour JSON côté serveur)
+### API REST
 
+Le serveur expose les endpoints suivants :
+
+- `POST /upload` : Upload d'un fichier
+- `GET /download/{filename}` : Téléchargement d'un fichier
+- `GET /list` : Liste des fichiers disponibles
+- `DELETE /delete/{filename}` : Suppression d'un fichier
+
+## Structure des Fichiers
+
+```
+mini-cloud/
+├── cloud-client/              # Application React
+│   ├── public/               # Assets statiques
+│   ├── src/                  # Code source React
+│   │   ├── CloudClient.js    # Composant principal
+│   │   ├── App.js           # Application principale
+│   │   └── index.js         # Point d'entrée
+│   └── package.json         # Dépendances Node.js
+├── MiniCloud_CORBA/          # Serveur Java CORBA
+│   ├── src/main/java/cloud/
+│   │   ├── Cloud.idl        # Définition CORBA
+│   │   ├── CloudModule/     # Classes générées CORBA
+│   │   └── server/          # Serveur REST et CORBA
+│   │       ├── CloudServer.java     # Serveur CORBA
+│   │       ├── CloudRestServer.java # Serveur REST
+│   │       └── FileManager.java     # Gestionnaire de fichiers
+│   ├── pom.xml              # Configuration Maven
+│   └── cloud_storage/       # Répertoire de stockage
+└── README.md               # Ce fichier
+```
+
+## Dépannage
+
+### Problèmes Courants
+
+1. **Erreur de connexion CORBA** :
+   - Vérifiez que le serveur CORBA est démarré sur le port 1050
+   - Assurez-vous que les ports ne sont pas utilisés par d'autres applications
+
+2. **Erreur lors de l'upload** :
+   - Vérifiez les permissions d'écriture dans le répertoire `cloud_storage`
+   - Assurez-vous que le serveur REST est accessible sur le port 4567
+
+3. **Erreur de compilation Java** :
+   - Vérifiez que Java JDK et Maven sont correctement installés
+   - Exécutez `mvn clean compile` pour recompiler
+
+4. **Erreur React** :
+   - Vérifiez que Node.js est installé
+   - Supprimez `node_modules` et réexécutez `npm install`
+
+### Logs et Debugging
+
+- Les logs du serveur CORBA s'affichent dans le terminal où il est démarré
+- Les logs du serveur REST s'affichent dans son terminal dédié
+- Pour le client React, ouvrez les outils de développement du navigateur (F12)
+
+## Développement
+
+### Ajout de Fonctionnalités
+
+Pour étendre le système :
+
+1. **Côté CORBA** : Modifiez `Cloud.idl` pour ajouter de nouvelles opérations
+2. **Côté REST** : Ajoutez de nouvelles routes dans `CloudRestServer.java`
+3. **Côté Client** : Modifiez `CloudClient.js` pour intégrer les nouvelles fonctionnalités
