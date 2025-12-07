@@ -86,21 +86,31 @@ pip install -r requirements.txt
 
 ## Démarrage du Système
 
-Le système doit être démarré dans un ordre spécifique : serveur CORBA en premier, puis serveur REST, serveur FastAPI, et enfin le client React.
+Le système doit être démarré dans un ordre spécifique : service de nommage CORBA en premier, puis serveur CORBA, serveur REST, serveur FastAPI, et enfin le client React.
 
-### Étape 1 : Démarrer le Serveur CORBA
+### Étape 1 : Démarrer le Service de Nommage CORBA (tnameserv)
 
-1. Ouvrez un terminal dans `MiniCloud_CORBA`
+1. Ouvrez un terminal (peut être lancé depuis n'importe quel répertoire)
+2. Démarrez le service de nommage CORBA :
+```bash
+tnameserv -ORBInitialPort 1050
+```
+
+Le service de nommage CORBA démarrera sur le port 1050. **Laissez ce terminal ouvert** - c'est le service de nommage qui permet aux serveurs CORBA de se trouver et de communiquer.
+
+### Étape 2 : Démarrer le Serveur CORBA
+
+1. Ouvrez un deuxième terminal dans `MiniCloud_CORBA`
 2. Démarrez le serveur CORBA :
 ```bash
 mvn exec:java -Dexec.mainClass="cloud.server.CloudServer"
 ```
 
-Le serveur CORBA démarrera sur le port 1050 et créera automatiquement le répertoire `cloud_storage` pour stocker les fichiers.
+Le serveur CORBA se connectera au service de nommage sur le port 1050 et créera automatiquement le répertoire `cloud_storage` pour stocker les fichiers.
 
-### Étape 2 : Démarrer le Serveur des api
+### Étape 3 : Démarrer le Serveur des api
 
-1. Ouvrez un deuxième terminal dans `MiniCloud_CORBA`
+1. Ouvrez un troisième terminal dans `MiniCloud_CORBA`
 2. Démarrez le serveur:
 ```bash
 mvn exec:java -Dexec.mainClass="cloud.server.CloudRestServer"
@@ -108,9 +118,9 @@ mvn exec:java -Dexec.mainClass="cloud.server.CloudRestServer"
 
 Le serveur des api démarrera sur le port 4567 et se connectera au service CORBA.
 
-### Étape 3 : Démarrer le Serveur FastAPI (IA)
+### Étape 4 : Démarrer le Serveur FastAPI (IA)
 
-1. Ouvrez un troisième terminal dans `AI`
+1. Ouvrez un quatrième terminal dans `AI`
 2. Démarrez le serveur FastAPI :
 ```bash
 uvicorn server:app --reload
@@ -118,9 +128,9 @@ uvicorn server:app --reload
 
 Le serveur FastAPI démarrera sur le port 8000 et permettra de générer des résumés IA des fichiers PDF.
 
-### Étape 4 : Démarrer le Client React
+### Étape 5 : Démarrer le Client React
 
-1. Ouvrez un quatrième terminal dans `cloud-client`
+1. Ouvrez un cinquième terminal dans `cloud-client`
 2. Démarrez l'application React :
 ```bash
 npm start
@@ -224,8 +234,10 @@ Projet_DAR/
 ### Problèmes Courants
 
 1. **Erreur de connexion CORBA** :
-   - Vérifiez que le serveur CORBA est démarré sur le port 1050
+   - Vérifiez que le service de nommage CORBA (`tnameserv`) est démarré en premier sur le port 1050
+   - Vérifiez que le serveur CORBA est démarré après le service de nommage
    - Assurez-vous que les ports ne sont pas utilisés par d'autres applications
+   - Sur Windows, `tnameserv` se trouve généralement dans le répertoire `bin` de votre installation JDK
 
 2. **Erreur lors de l'upload** :
    - Vérifiez les permissions d'écriture dans le répertoire `cloud_storage`
