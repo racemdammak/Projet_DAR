@@ -1,0 +1,13 @@
+module CloudModule {
+
+    // Définir les types séquence
+    typedef sequence<octet> OctetSeq;
+    typedef sequence<string> StringSeq;
+
+    interface Cloud {
+        void upload(in string filename, in OctetSeq data);
+        OctetSeq download(in string filename);
+        void deleteFile(in string filename);
+        StringSeq listFiles();
+    };
+};

@@ -6,7 +6,13 @@ import "./CloudClient.css";
 
 function CloudClient() {
   const [filesList, setFilesList] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [summary, setSummary] = useState("");
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [serverConnected, setServerConnected] = useState(true);
   const SERVER_URL = "http://127.0.0.1:4567";
+  const AI_SERVER_URL = "http://127.0.0.1:8000"; // FastAPI server
 
   // Drag & Drop
   const onDrop = useCallback(async (acceptedFiles) => {
@@ -25,9 +31,15 @@ function CloudClient() {
 
         const text = await res.text();
         toast.success(text);
+        setServerConnected(true);
       } catch (err) {
         console.error(err);
-        toast.error(`Erreur upload: ${file.name}`);
+        setServerConnected(false);
+        if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+          toast.error(`Serveur non accessible. Assurez-vous que le serveur REST Java est démarré sur le port 4567.`);
+        } else {
+          toast.error(`Erreur upload: ${file.name}`);
+        }
       }
     }
     fetchFiles(); // actualiser la liste après upload
@@ -39,13 +51,21 @@ function CloudClient() {
   const fetchFiles = async () => {
     try {
       const res = await fetch(`${SERVER_URL}/list`);
+      if (!res.ok) throw new Error("Erreur serveur");
       const text = await res.text();
       // Convertir la string JSON en tableau JS
       const parsedFiles = JSON.parse(text.replace(/'/g, '"'));
       setFilesList(parsedFiles);
+      setServerConnected(true);
     } catch (err) {
       console.error(err);
-      toast.error("Erreur récupération liste fichiers");
+      setServerConnected(false);
+      if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+        // Ne pas afficher de toast à chaque fois pour éviter le spam
+        console.warn("Serveur REST non accessible");
+      } else {
+        toast.error("Erreur récupération liste fichiers");
+      }
     }
   };
 
@@ -86,6 +106,46 @@ function CloudClient() {
     }
   };
 
+  // Résumer un fichier avec IA
+  const summarizeFile = async (filename) => {
+    setIsLoadingSummary(true);
+    setSelectedFile(filename);
+    setShowSummaryModal(true);
+    setSummary("");
+
+    try {
+      const res = await fetch(`${AI_SERVER_URL}/summarize`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filename: filename }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Erreur lors du résumé");
+      }
+
+      const data = await res.json();
+      setSummary(data.summary || "Aucun résumé disponible");
+      toast.success("Résumé généré avec succès");
+    } catch (err) {
+      console.error(err);
+      setSummary(`Erreur: ${err.message}`);
+      toast.error(`Erreur lors du résumé: ${err.message}`);
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+
+  // Fermer le modal de résumé
+  const closeSummaryModal = () => {
+    setShowSummaryModal(false);
+    setSummary("");
+    setSelectedFile(null);
+  };
+
   useEffect(() => {
     fetchFiles();
   }, []);
@@ -93,7 +153,16 @@ function CloudClient() {
   return (
     <div className="cloud-client">
       <div className="header">
-        <h1>MiniCloud Client</h1>
+        <h1 className="main-title">
+          <span className="title-gradient">MiniCloud</span>
+          <span className="title-subtitle">Client</span>
+        </h1>
+        <div className="header-accent"></div>
+        {!serverConnected && (
+          <div className="server-status-error">
+            ⚠️ Serveur REST non accessible. Vérifiez que le serveur Java est démarré sur le port 4567.
+          </div>
+        )}
       </div>
 
       {/* Drag & Drop */}
@@ -102,6 +171,7 @@ function CloudClient() {
         className={`upload-area ${isDragActive ? 'active' : ''}`}
       >
         <input {...getInputProps()} />
+        <div className="upload-icon">📁</div>
         <p className="upload-text">
           {isDragActive ? (
             "Déposez vos fichiers ici ..."
@@ -113,30 +183,74 @@ function CloudClient() {
 
       {/* Liste des fichiers */}
       <div className="files-section">
-        <h2>Fichiers disponibles</h2>
+        <h2 className="section-title">
+          <span className="section-title-line"></span>
+          <span>Fichiers disponibles</span>
+          <span className="section-title-line"></span>
+        </h2>
         {filesList.length === 0 ? (
           <p className="no-files">Aucun fichier trouvé.</p>
         ) : (
           <div className="files-grid">
             {filesList.map((f) => (
               <div key={f} className="file-card">
+                <div className="file-icon">📄</div>
                 <div className="file-name">{f}</div>
-                <button className="download-btn" onClick={() => downloadFile(f)}>
-                  Télécharger
-                </button>
-                <button className="delete-btn" onClick={() => deleteFile(f)}>
-                  Supprimer
-                </button>
-                <span style={{ fontSize: "0.8em", color: "gray", marginTop: "5px" }}>
-                  (path serveur: /{f})
-                </span>
+                <div className="file-actions">
+                  <button 
+                    className="ai-summary-btn" 
+                    onClick={() => summarizeFile(f)}
+                    title="Résumer avec IA"
+                  >
+                    <span className="ai-icon">🤖</span>
+                    Résumer avec IA
+                  </button>
+                  <button className="download-btn" onClick={() => downloadFile(f)}>
+                    Télécharger
+                  </button>
+                  <button className="delete-btn" onClick={() => deleteFile(f)}>
+                    Supprimer
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <ToastContainer position="top-right" autoClose={3000} />
+      {/* Modal de résumé IA */}
+      {showSummaryModal && (
+        <div className="summary-modal-overlay" onClick={closeSummaryModal}>
+          <div className="summary-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="summary-modal-header">
+              <h3 className="summary-title">
+                <span className="ai-icon-large">🤖</span>
+                Résumé IA - {selectedFile}
+              </h3>
+              <button className="close-btn" onClick={closeSummaryModal}>
+                ✕
+              </button>
+            </div>
+            <div className="summary-content">
+              {isLoadingSummary ? (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Génération du résumé en cours...</p>
+                </div>
+              ) : (
+                <div className="summary-text">{summary}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer 
+        position="top-right" 
+        autoClose={3000}
+        theme="dark"
+        toastClassName="futuristic-toast"
+      />
     </div>
   );
 }
