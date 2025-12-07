@@ -15,6 +15,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <java8.home>C:\Program Files\Java\jdk1.8.0_201</java8.home>
     </properties>
 
     <dependencies>
@@ -47,4 +48,23 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                    <compilerArgs>
+                        <arg>-bootclasspath</arg>
+                        <arg>${java8.home}/jre/lib/rt.jar;${java8.home}/jre/lib/jce.jar</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
