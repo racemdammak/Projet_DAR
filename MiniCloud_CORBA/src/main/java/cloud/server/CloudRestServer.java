@@ -54,17 +54,50 @@ public class CloudRestServer {
             // ===== Routes =====
 
             // Upload
-            Spark.post("/upload", (req, res) -> {
-                String filename = req.queryParams("filename");
-                if (filename == null || filename.isEmpty()) {
-                    res.status(400);
-                    return "Nom de fichier manquant";
-                }
+            Spark.post("/upload", "multipart/form-data", (req, res) -> {
+                try {
+                    // Parser le multipart
+                    String filename = req.queryParams("filename");
+                    if (filename == null || filename.isEmpty()) {
+                        // Essayer de récupérer depuis le body si pas en query param
+                        String contentType = req.contentType();
+                        if (contentType != null && contentType.contains("multipart/form-data")) {
+                            // Lire directement depuis l'input stream
+                            // Le filename est envoyé comme query param ou dans le form
+                            filename = req.queryParams("filename");
+                        }
+                        if (filename == null || filename.isEmpty()) {
+                            res.status(400);
+                            return "Nom de fichier manquant";
+                        }
+                    }
 
-                InputStream is = req.raw().getInputStream();
-                byte[] data = readInputStream(is);
-                cloud.upload(filename, data);
-                return "Upload OK : " + filename;
+                    // Lire le body complet (le fichier est dans le body)
+                    InputStream is = req.raw().getInputStream();
+                    byte[] allData = readInputStream(is);
+                    
+                    if (allData.length == 0) {
+                        res.status(400);
+                        return "Fichier vide";
+                    }
+                    
+                    // Extraire les données du fichier depuis le multipart
+                    byte[] fileData = extractFileFromMultipart(allData, filename);
+                    
+                    if (fileData.length == 0) {
+                        // Si l'extraction échoue, utiliser tout le body (pour compatibilité)
+                        fileData = allData;
+                    }
+                    
+                    cloud.upload(filename, fileData);
+                    System.out.println("Fichier uploadé avec succès : " + filename + " (" + fileData.length + " bytes)");
+                    res.status(200);
+                    return "Upload OK : " + filename;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    res.status(500);
+                    return "Erreur upload : " + e.getMessage();
+                }
             });
 
             // Download
@@ -107,10 +140,61 @@ public class CloudRestServer {
     private static byte[] readInputStream(InputStream is) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         int nRead;
-        byte[] data = new byte[1024];
+        byte[] data = new byte[8192]; // Buffer plus grand pour les gros fichiers
         while ((nRead = is.read(data, 0, data.length)) != -1) {
             buffer.write(data, 0, nRead);
         }
         return buffer.toByteArray();
+    }
+    
+    // ===== Extraire le fichier depuis le multipart =====
+    private static byte[] extractFileFromMultipart(byte[] multipartData, String filename) {
+        try {
+            String dataStr = new String(multipartData, "ISO-8859-1");
+            
+            // Chercher le début des données du fichier
+            // Format: Content-Disposition: form-data; name="file"; filename="..."
+            String fileMarker = "name=\"file\"";
+            int fileStart = dataStr.indexOf(fileMarker);
+            
+            if (fileStart == -1) {
+                // Si pas trouvé, retourner les données telles quelles
+                return multipartData;
+            }
+            
+            // Trouver la fin de l'en-tête (double saut de ligne)
+            int headerEnd = dataStr.indexOf("\r\n\r\n", fileStart);
+            if (headerEnd == -1) {
+                headerEnd = dataStr.indexOf("\n\n", fileStart);
+            }
+            
+            if (headerEnd == -1) {
+                return multipartData;
+            }
+            
+            // Début des données du fichier
+            int dataStart = headerEnd + (dataStr.charAt(headerEnd + 1) == '\r' ? 4 : 2);
+            
+            // Trouver la fin (boundary suivant ou fin)
+            int dataEnd = dataStr.indexOf("\r\n--", dataStart);
+            if (dataEnd == -1) {
+                dataEnd = dataStr.indexOf("\n--", dataStart);
+            }
+            
+            if (dataEnd == -1) {
+                // Utiliser la fin des données
+                dataEnd = multipartData.length;
+            }
+            
+            // Extraire les bytes
+            byte[] fileBytes = new byte[dataEnd - dataStart];
+            System.arraycopy(multipartData, dataStart, fileBytes, 0, fileBytes.length);
+            
+            return fileBytes;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // En cas d'erreur, retourner les données complètes
+            return multipartData;
+        }
     }
 }

@@ -1,0 +1,13 @@
+cloud\CloudModule\Cloud.class
+cloud\CloudModule\StringSeqHelper.class
+cloud\CloudModule\StringSeqHolder.class
+cloud\CloudModule\CloudHolder.class
+cloud\CloudModule\CloudPOA.class
+CloudModule\_CloudStub.class
+cloud\server\CloudRestServer.class
+cloud\CloudModule\OctetSeqHelper.class
+cloud\server\CloudServer.class
+cloud\CloudModule\CloudOperations.class
+cloud\CloudModule\OctetSeqHolder.class
+cloud\CloudModule\CloudHelper.class
+cloud\server\FileManager.class

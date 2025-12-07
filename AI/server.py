@@ -42,7 +42,7 @@ STORAGE_DIR = find_storage_directory()
 @app.get("/")
 async def read_root():
     return {
-        "Hello": "World",
+        "racem": "dammak",
         "storage_dir": STORAGE_DIR,
         "storage_exists": os.path.exists(STORAGE_DIR)
     }

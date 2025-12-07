@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { ToastContainer, toast } from "react-toastify";
+import ReactMarkdown from "react-markdown";
 import "react-toastify/dist/ReactToastify.css";
 import "./CloudClient.css";
 
@@ -22,12 +23,16 @@ function CloudClient() {
       formData.append("filename", file.name);  // nom du fichier
 
       try {
-        const res = await fetch(`${SERVER_URL}/upload`, {
+        const res = await fetch(`${SERVER_URL}/upload?filename=${encodeURIComponent(file.name)}`, {
           method: "POST",
           body: formData,
+          // Ne pas définir Content-Type, le navigateur le fera automatiquement avec la boundary
         });
 
-        if (!res.ok) throw new Error(`Erreur upload: ${file.name}`);
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || `Erreur upload: ${file.name}`);
+        }
 
         const text = await res.text();
         toast.success(text);
@@ -35,10 +40,10 @@ function CloudClient() {
       } catch (err) {
         console.error(err);
         setServerConnected(false);
-        if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+        if (err.name === 'TypeError' && (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_RESET'))) {
           toast.error(`Serveur non accessible. Assurez-vous que le serveur REST Java est démarré sur le port 4567.`);
         } else {
-          toast.error(`Erreur upload: ${file.name}`);
+          toast.error(`Erreur upload: ${err.message || file.name}`);
         }
       }
     }
@@ -238,7 +243,9 @@ function CloudClient() {
                   <p>Génération du résumé en cours...</p>
                 </div>
               ) : (
-                <div className="summary-text">{summary}</div>
+                <div className="summary-text">
+                  <ReactMarkdown>{summary}</ReactMarkdown>
+                </div>
               )}
             </div>
           </div>
